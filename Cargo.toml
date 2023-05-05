@@ -1,0 +1,30 @@
+[package]
+name = "charts"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+image = "0.24.6"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1", features = ["raw_value"] }
+serde_valid = "0.16.1"
+tokio = { version = "1", features = ["macros"] }
+vercel_runtime = { version = "0.2.1" }
+
+# You can specify a library for shared logic here (optional)
+[lib]
+path = "src/lib.rs"
+
+# Each handler has to be specified as [[bin]]
+[[bin]]
+name = "handler"
+path = "api/handler.rs"
+
+# Note that you need to provide unique names for each binary:
+# [[bin]]
+# name = "user-id"
+# path = "api/user/[id].rs"
+#
+# [[bin]]
+# name = "group-id"
+# path = "api/group/[id].rs"
