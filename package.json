@@ -1,5 +1,6 @@
 {
-	"devDependencies": {
-		"vercel": "^29.1.1"
-	}
+  "name": "charts",
+  "devDependencies": {
+    "vercel": "^29.1.1"
+  }
 }
