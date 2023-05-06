@@ -335,11 +335,10 @@ fn draw_filled_circle_part_mut<C: Canvas>(
     color: C::Pixel,
     part: CirclePart,
 ) {
-    let radius_sq = radius * radius;
     let radius_fl = radius as f32;
 
-    for y in 0..radius_sq {
-        for x in 0..radius_sq {
+    for y in 0..radius + 1 {
+        for x in 0..radius + 1 {
             let dx = (radius - x) as f32;
             let dy = (radius - y) as f32;
             let dist = (dx * dx + dy * dy).sqrt();
