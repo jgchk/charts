@@ -29,6 +29,7 @@ pub struct Chart {
 
     #[validate(minimum = 100)]
     #[validate(maximum = 500)]
+    #[serde(default = "default_cover_size")]
     cover_size: u16,
 }
 
@@ -42,6 +43,10 @@ struct ChartEntry {
     #[validate(minimum = 1)]
     #[validate(maximum = 10)]
     rating: Option<u8>,
+}
+
+fn default_cover_size() -> u16 {
+    300
 }
 
 type Image = Blend<ImageBuffer<Pixel, Vec<u8>>>;
