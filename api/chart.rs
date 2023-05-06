@@ -53,6 +53,9 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
     match chart {
         Ok(chart) => Ok(Response::builder()
             .status(StatusCode::OK)
+            .header("Access-Control-Allow-Origin", "*")
+            .header("Access-Control-Allow-Methods", "POST, OPTIONS")
+            .header("Access-Control-Allow-Headers", "Content-Type")
             .header("Content-Type", "image/png")
             .body(chart.into())?),
         Err(err) => make_error_response_detail(
