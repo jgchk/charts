@@ -165,6 +165,7 @@ dependencies = [
  "anyhow",
  "bytes",
  "futures",
+ "http",
  "image",
  "imageproc",
  "reqwest",

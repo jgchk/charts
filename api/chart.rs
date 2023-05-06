@@ -2,6 +2,7 @@ use charts::{
     api::{make_error_response, make_error_response_detail},
     charts::{create_chart, Chart},
 };
+use http::Method;
 use serde_valid::Validate;
 use vercel_runtime::{run, Body, Error, Request, RequestExt, Response, StatusCode};
 
@@ -11,6 +12,22 @@ async fn main() -> Result<(), Error> {
 }
 
 pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
+    if req.method() == Method::OPTIONS {
+        return Ok(Response::builder()
+            .status(StatusCode::OK)
+            .header("Access-Control-Allow-Origin", "*")
+            .header("Access-Control-Allow-Methods", "POST, OPTIONS")
+            .header("Access-Control-Allow-Headers", "Content-Type")
+            .body(Body::Empty)?);
+    }
+
+    if req.method() != Method::POST {
+        return make_error_response(
+            StatusCode::METHOD_NOT_ALLOWED,
+            "Only POST requests are allowed",
+        );
+    }
+
     let chart_request = req.payload::<Chart>();
     let chart_request = match chart_request {
         Ok(Some(chart_request)) => chart_request,
