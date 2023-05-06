@@ -1,4 +1,4 @@
-use std::{collections::HashMap, f32::consts::PI, io::Cursor, vec};
+use std::{io::Cursor, vec};
 
 use image::{
     codecs::png::PngEncoder,
@@ -271,56 +271,99 @@ fn draw_rounded_rect_mut<C: Canvas>(
     radius: u32,
     color: C::Pixel,
 ) {
-    let mut cached_y_to_x: HashMap<u32, Vec<f32>> = HashMap::new();
-    for i in 0..100 {
-        let p = (i as f32) / 100.0;
-        let angle = p * (PI / 2.0);
-        let x_ = (1.0 - angle.cos()) * (radius as f32);
-        let y_ = (1.0 - angle.sin()) * (radius as f32);
-
-        let y_rounded = y_.round() as u32;
-
-        let prev = cached_y_to_x.get_mut(&y_rounded);
-        if let Some(prev) = prev {
-            prev.push(x_);
-        } else {
-            cached_y_to_x.insert(y_rounded, vec![x_]);
-        }
-    }
-
-    let cached_y_to_x_averaged: HashMap<u32, u32> = cached_y_to_x
-        .into_iter()
-        .map(|(y, xs)| {
-            let len = xs.len() as f32;
-            let sum: f32 = xs.into_iter().sum();
-            let avg = sum / len;
-            let avg_rounded = avg.round() as u32;
-            (y, avg_rounded)
-        })
-        .collect();
-
-    for i in 0..radius {
-        let radius_offset_px = cached_y_to_x_averaged.get(&i).unwrap();
-
-        let length = width - (2 * radius_offset_px);
-
-        let x1 = x + radius_offset_px;
-        let x2 = x1 + length;
-
-        let y_top = y + i;
-        let y_bottom = y + height - i;
-
-        for xp in x1..x2 {
-            canvas.draw_pixel(xp, y_top, color);
-            canvas.draw_pixel(xp, y_bottom, color);
-        }
-    }
-
+    // full middle rect
     draw_filled_rect_mut(
         canvas,
-        Rect::at(x as i32, (y + radius) as i32).of_size(width, height - (2 * radius) + 1),
+        Rect::at(x as i32, (y + radius + 1) as i32).of_size(width, height - (2 * radius) - 1),
         color,
-    )
+    );
+    // top rect
+    draw_filled_rect_mut(
+        canvas,
+        Rect::at((x + radius + 1) as i32, y as i32).of_size(width - (2 * radius) - 2, radius + 1),
+        color,
+    );
+    // bottom rect
+    draw_filled_rect_mut(
+        canvas,
+        Rect::at((x + radius + 1) as i32, (y + height - radius) as i32)
+            .of_size(width - (2 * radius) - 2, radius + 1),
+        color,
+    );
+
+    // corners
+    draw_filled_circle_part_mut(
+        canvas,
+        (x + radius, y + radius),
+        radius,
+        color,
+        CirclePart::TopLeft,
+    );
+    draw_filled_circle_part_mut(
+        canvas,
+        (x + width - radius - 1, y + radius),
+        radius,
+        color,
+        CirclePart::TopRight,
+    );
+    draw_filled_circle_part_mut(
+        canvas,
+        (x + radius, y + height - radius),
+        radius,
+        color,
+        CirclePart::BottomLeft,
+    );
+    draw_filled_circle_part_mut(
+        canvas,
+        (x + width - radius - 1, y + height - radius),
+        radius,
+        color,
+        CirclePart::BottomRight,
+    );
+}
+
+enum CirclePart {
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
+}
+fn draw_filled_circle_part_mut<C: Canvas>(
+    canvas: &mut C,
+    center: (u32, u32),
+    radius: u32,
+    color: C::Pixel,
+    part: CirclePart,
+) {
+    let radius_sq = radius * radius;
+    let radius_fl = radius as f32;
+
+    for y in 0..radius_sq {
+        for x in 0..radius_sq {
+            let dx = (radius - x) as f32;
+            let dy = (radius - y) as f32;
+            let dist = (dx * dx + dy * dy).sqrt();
+
+            // point lies outside circle
+            if dist - radius_fl > 1.0 {
+                continue;
+            }
+
+            // edge threshold
+            if radius_fl / dist < 0.9 {
+                continue;
+            }
+
+            let (x, y) = match part {
+                CirclePart::TopLeft => (center.0 - radius + x, center.1 - radius + y),
+                CirclePart::TopRight => (center.0 + radius - x, center.1 - radius + y),
+                CirclePart::BottomLeft => (center.0 - radius + x, center.1 + radius - y),
+                CirclePart::BottomRight => (center.0 + radius - x, center.1 + radius - y),
+            };
+
+            canvas.draw_pixel(x, y, color);
+        }
+    }
 }
 
 fn rating_to_string(rating: u8) -> Option<&'static str> {
