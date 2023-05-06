@@ -116,8 +116,7 @@ pub async fn create_chart(params: Chart) -> anyhow::Result<Vec<u8>> {
         let y = (i as u32 / (cols as u32)) * (cover_size as u32);
 
         let mut avg_color: Option<Rgba<u8>> = None;
-        if let Some(image_url) = image_url {
-            let img_bytes = remote_image_map.get(&image_url).unwrap();
+        if let Some(img_bytes) = image_url.and_then(|image_url| remote_image_map.get(&image_url)) {
             let img = image::load_from_memory(&img_bytes)?;
 
             avg_color = Some(get_average_color(&img));
