@@ -70,7 +70,6 @@ pub async fn create_chart(params: Chart) -> Result<Vec<u8>, anyhow::Error> {
             }
         }
     };
-    dbg!(rows, cols);
 
     let width = (cols as u32) * (cover_size as u32);
     let height = (rows as u32) * (cover_size as u32);
