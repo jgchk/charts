@@ -44,6 +44,9 @@ struct ChartEntry {
     rating: Option<u8>,
 }
 
+type Image = Blend<ImageBuffer<Pixel, Vec<u8>>>;
+type Pixel = Rgba<u8>;
+
 pub async fn create_chart(params: Chart) -> Result<Vec<u8>, anyhow::Error> {
     let width = (params.cols as u32) * (params.cover_size as u32);
     let height = (params.rows as u32) * (params.cover_size as u32);
@@ -262,14 +265,14 @@ fn get_font_size(start_size: f32, font: &Font, text: &str, target_width: u32) ->
     }
 }
 
-fn draw_rounded_rect_mut<C: Canvas>(
-    canvas: &mut C,
+fn draw_rounded_rect_mut(
+    canvas: &mut Image,
     x: u32,
     y: u32,
     width: u32,
     height: u32,
     radius: u32,
-    color: C::Pixel,
+    color: Pixel,
 ) {
     // full middle rect
     draw_filled_rect_mut(
@@ -328,13 +331,14 @@ enum CirclePart {
     BottomLeft,
     BottomRight,
 }
-fn draw_filled_circle_part_mut<C: Canvas>(
-    canvas: &mut C,
+fn draw_filled_circle_part_mut(
+    canvas: &mut Image,
     center: (u32, u32),
-    radius: u32,
-    color: C::Pixel,
+    radius_: u32,
+    color: Pixel,
     part: CirclePart,
 ) {
+    let radius = radius_ + 1;
     let radius_fl = radius as f32;
 
     for y in 0..radius + 1 {
@@ -360,7 +364,12 @@ fn draw_filled_circle_part_mut<C: Canvas>(
                 CirclePart::BottomRight => (center.0 + radius - x, center.1 + radius - y),
             };
 
-            canvas.draw_pixel(x, y, color);
+            let antialiased_alpha = (radius as f32 - dist).clamp(0.0, 1.0);
+            let original_alpha = color[3] as f32 / 255.0;
+            let alpha = antialiased_alpha * original_alpha;
+            let alpha_color = Rgba([color[0], color[1], color[2], (alpha * 255.0) as u8]);
+
+            canvas.draw_pixel(x, y, alpha_color);
         }
     }
 }
