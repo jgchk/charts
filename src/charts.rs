@@ -29,15 +29,15 @@ pub struct Chart {
     entries: Vec<ChartEntry>,
 
     #[validate(minimum = 1)]
-    #[validate(maximum = 5)]
+    #[validate(maximum = 25)]
     rows: Option<u8>,
 
     #[validate(minimum = 1)]
-    #[validate(maximum = 5)]
+    #[validate(maximum = 25)]
     cols: Option<u8>,
 
     #[validate(minimum = 100)]
-    #[validate(maximum = 500)]
+    #[validate(maximum = 800)]
     cover_size: Option<u16>,
 }
 
