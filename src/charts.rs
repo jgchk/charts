@@ -13,24 +13,26 @@ use rusttype::{Font, Scale};
 use serde::{Deserialize, Serialize};
 use serde_valid::Validate;
 
+use crate::math::optimal_square;
+
 #[derive(Debug, Deserialize, Validate, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Chart {
     #[validate(min_items = 1)]
+    #[validate(max_items = 25)]
     entries: Vec<ChartEntry>,
 
     #[validate(minimum = 1)]
     #[validate(maximum = 5)]
-    rows: u8,
+    rows: Option<u8>,
 
     #[validate(minimum = 1)]
     #[validate(maximum = 5)]
-    cols: u8,
+    cols: Option<u8>,
 
     #[validate(minimum = 100)]
     #[validate(maximum = 500)]
-    #[serde(default = "default_cover_size")]
-    cover_size: u16,
+    cover_size: Option<u16>,
 }
 
 #[derive(Debug, Deserialize, Validate, Serialize)]
@@ -45,27 +47,44 @@ struct ChartEntry {
     rating: Option<u8>,
 }
 
-fn default_cover_size() -> u16 {
-    300
-}
-
 type Image = Blend<ImageBuffer<Pixel, Vec<u8>>>;
 type Pixel = Rgba<u8>;
 
 pub async fn create_chart(params: Chart) -> Result<Vec<u8>, anyhow::Error> {
-    let width = (params.cols as u32) * (params.cover_size as u32);
-    let height = (params.rows as u32) * (params.cover_size as u32);
+    let cover_size = params.cover_size.unwrap_or(300);
 
-    let outer_margin = (params.cover_size as f32 * 0.025) as u32;
-    let inner_margin = (params.cover_size as f32 * 0.025) as u32;
+    let (rows, cols) = {
+        match (params.rows, params.cols) {
+            (Some(rows), Some(cols)) => (rows, cols),
+            (Some(rows), None) => (
+                rows,
+                (params.entries.len() as f32 / rows as f32).ceil() as u8,
+            ),
+            (None, Some(cols)) => (
+                (params.entries.len() as f32 / cols as f32).ceil() as u8,
+                cols,
+            ),
+            (None, None) => {
+                let (rows, cols) = optimal_square(params.entries.len() as u32);
+                (rows as u8, cols as u8)
+            }
+        }
+    };
+    dbg!(rows, cols);
 
-    let max_card_width = params.cover_size as u32 - 2 * outer_margin;
+    let width = (cols as u32) * (cover_size as u32);
+    let height = (rows as u32) * (cover_size as u32);
+
+    let outer_margin = (cover_size as f32 * 0.025) as u32;
+    let inner_margin = (cover_size as f32 * 0.025) as u32;
+
+    let max_card_width = cover_size as u32 - 2 * outer_margin;
     let max_card_width_inner = max_card_width - 2 * inner_margin;
-    let card_corner_radius = (params.cover_size as f32 * 0.02) as u32;
+    let card_corner_radius = (cover_size as f32 * 0.02) as u32;
 
-    let line_spacing = (params.cover_size as f32 * 0.01) as u32;
+    let line_spacing = (cover_size as f32 * 0.01) as u32;
 
-    let num_displayed_covers = params.rows * params.cols;
+    let num_displayed_covers = rows * cols;
 
     // Create a new ImgBuf with width: imgx and height: imgy
     let mut imgbuf = Blend(ImageBuffer::new(width, height));
@@ -84,8 +103,8 @@ pub async fn create_chart(params: Chart) -> Result<Vec<u8>, anyhow::Error> {
         .take(num_displayed_covers as usize)
         .enumerate()
     {
-        let x = (i as u32 % (params.cols as u32)) * (params.cover_size as u32);
-        let y = (i as u32 / (params.cols as u32)) * (params.cover_size as u32);
+        let x = (i as u32 % (cols as u32)) * (cover_size as u32);
+        let y = (i as u32 / (cols as u32)) * (cover_size as u32);
 
         let mut avg_color: Option<Rgba<u8>> = None;
         if let Some(image_url) = image_url {
@@ -94,16 +113,14 @@ pub async fn create_chart(params: Chart) -> Result<Vec<u8>, anyhow::Error> {
 
             avg_color = Some(get_average_color(&img));
 
-            let filter = if img.width() < (params.cover_size as u32)
-                || img.height() < (params.cover_size as u32)
+            let filter = if img.width() < (cover_size as u32) || img.height() < (cover_size as u32)
             {
                 FilterType::CatmullRom
             } else {
                 FilterType::Lanczos3
             };
 
-            let scaled =
-                img.resize_to_fill(params.cover_size as u32, params.cover_size as u32, filter);
+            let scaled = img.resize_to_fill(cover_size as u32, cover_size as u32, filter);
 
             imageops::replace(&mut imgbuf.0, &scaled, x as i64, y as i64);
         }
@@ -135,7 +152,7 @@ pub async fn create_chart(params: Chart) -> Result<Vec<u8>, anyhow::Error> {
             lines
         };
 
-        let max_font_size = (params.cover_size as f32) * 0.053333;
+        let max_font_size = (cover_size as f32) * 0.053333;
         let (calculated_lines, max_text_width) = {
             let mut max_width = 0;
             let calculated_lines = lines
@@ -162,12 +179,12 @@ pub async fn create_chart(params: Chart) -> Result<Vec<u8>, anyhow::Error> {
         let card_height = total_text_height + 2 * inner_margin;
         let card_width = max_text_width + 2 * inner_margin;
 
-        let card_x = x + (params.cover_size as u32 - card_width) / 2;
+        let card_x = x + (cover_size as u32 - card_width) / 2;
 
         draw_rounded_rect_mut(
             &mut imgbuf,
             card_x,
-            y + params.cover_size as u32 - outer_margin - card_height,
+            y + cover_size as u32 - outer_margin - card_height,
             card_width,
             card_height,
             card_corner_radius,
@@ -176,13 +193,8 @@ pub async fn create_chart(params: Chart) -> Result<Vec<u8>, anyhow::Error> {
 
         let mut drawn_height = 0;
         for (line, font, font_size, (width, height)) in calculated_lines.into_iter().rev() {
-            let x = x + (params.cover_size as u32 - width) / 2;
-            let y = y + params.cover_size as u32
-                - outer_margin
-                - inner_margin
-                - height
-                - drawn_height
-                - 1;
+            let x = x + (cover_size as u32 - width) / 2;
+            let y = y + cover_size as u32 - outer_margin - inner_margin - height - drawn_height - 1;
 
             drawn_height += height + line_spacing;
 
