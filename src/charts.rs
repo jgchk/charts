@@ -1,4 +1,4 @@
-use std::{f32::consts::PI, io::Cursor, vec};
+use std::{collections::HashMap, f32::consts::PI, io::Cursor, vec};
 
 use image::{
     codecs::png::PngEncoder,
@@ -6,8 +6,7 @@ use image::{
     ColorType, DynamicImage, EncodableLayout, GenericImageView, ImageBuffer, ImageEncoder, Rgba,
 };
 use imageproc::{
-    drawing::{draw_filled_rect_mut, draw_polygon_mut, draw_text_mut, text_size, Blend, Canvas},
-    point::Point,
+    drawing::{draw_filled_rect_mut, draw_text_mut, text_size, Blend, Canvas},
     rect::Rect,
 };
 use rusttype::{Font, Scale};
@@ -54,6 +53,7 @@ pub async fn create_chart(params: Chart) -> Result<Vec<u8>, anyhow::Error> {
 
     let max_card_width = params.cover_size as u32 - 2 * outer_margin;
     let max_card_width_inner = max_card_width - 2 * inner_margin;
+    let card_corner_radius = (params.cover_size as f32 * 0.02) as u32;
 
     let line_spacing = (params.cover_size as f32 * 0.01) as u32;
 
@@ -156,13 +156,13 @@ pub async fn create_chart(params: Chart) -> Result<Vec<u8>, anyhow::Error> {
 
         let card_x = x + (params.cover_size as u32 - card_width) / 2;
 
-        draw_filled_rect_mut(
+        draw_rounded_rect_mut(
             &mut imgbuf,
-            Rect::at(
-                card_x as i32,
-                (y + params.cover_size as u32 - outer_margin - card_height) as i32,
-            )
-            .of_size(card_width as u32, card_height),
+            card_x,
+            y + params.cover_size as u32 - outer_margin - card_height,
+            card_width,
+            card_height,
+            card_corner_radius,
             card_color,
         );
 
@@ -262,41 +262,65 @@ fn get_font_size(start_size: f32, font: &Font, text: &str, target_width: u32) ->
     }
 }
 
-fn draw_filled_rounded_rect_mut<C: Canvas>(
+fn draw_rounded_rect_mut<C: Canvas>(
     canvas: &mut C,
-    x: i32,
-    y: i32,
+    x: u32,
+    y: u32,
     width: u32,
     height: u32,
-    radius: f32,
-    resolution: usize,
+    radius: u32,
     color: C::Pixel,
 ) {
-    let points = rounded_rectangle_points(x, y, width, height, radius, resolution);
-    draw_polygon_mut(canvas, &points, color);
-}
+    let mut cached_y_to_x: HashMap<u32, Vec<f32>> = HashMap::new();
+    for i in 0..100 {
+        let p = (i as f32) / 100.0;
+        let angle = p * (PI / 2.0);
+        let x_ = (1.0 - angle.cos()) * (radius as f32);
+        let y_ = (1.0 - angle.sin()) * (radius as f32);
 
-fn rounded_rectangle_points(
-    x: i32,
-    y: i32,
-    width: u32,
-    height: u32,
-    radius: f32,
-    resolution: usize,
-) -> Vec<Point<i32>> {
-    let mut points = Vec::new();
-    let angles = [1.5 * PI, 0.0, 0.5 * PI, PI];
+        let y_rounded = y_.round() as u32;
 
-    for &angle in &angles {
-        for i in 0..resolution {
-            let a = angle + (i as f32) / (resolution as f32) * (0.5 * PI);
-            let px = (x + (width as i32) / 2) as f32 + (width as f32 / 2.0 - radius) * a.cos();
-            let py = (y + (height as i32) / 2) as f32 + (height as f32 / 2.0 - radius) * a.sin();
-            points.push(Point::new(px.round() as i32, py.round() as i32));
+        let prev = cached_y_to_x.get_mut(&y_rounded);
+        if let Some(prev) = prev {
+            prev.push(x_);
+        } else {
+            cached_y_to_x.insert(y_rounded, vec![x_]);
         }
     }
 
-    points
+    let cached_y_to_x_averaged: HashMap<u32, u32> = cached_y_to_x
+        .into_iter()
+        .map(|(y, xs)| {
+            let len = xs.len() as f32;
+            let sum: f32 = xs.into_iter().sum();
+            let avg = sum / len;
+            let avg_rounded = avg.round() as u32;
+            (y, avg_rounded)
+        })
+        .collect();
+
+    for i in 0..radius {
+        let radius_offset_px = cached_y_to_x_averaged.get(&i).unwrap();
+
+        let length = width - (2 * radius_offset_px);
+
+        let x1 = x + radius_offset_px;
+        let x2 = x1 + length;
+
+        let y_top = y + i;
+        let y_bottom = y + height - i;
+
+        for xp in x1..x2 {
+            canvas.draw_pixel(xp, y_top, color);
+            canvas.draw_pixel(xp, y_bottom, color);
+        }
+    }
+
+    draw_filled_rect_mut(
+        canvas,
+        Rect::at(x as i32, (y + radius) as i32).of_size(width, height - (2 * radius) + 1),
+        color,
+    )
 }
 
 fn rating_to_string(rating: u8) -> Option<&'static str> {
