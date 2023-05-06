@@ -57,6 +57,8 @@ pub async fn create_chart(params: Chart) -> Result<Vec<u8>, anyhow::Error> {
 
     let line_spacing = (params.cover_size as f32 * 0.01) as u32;
 
+    let num_displayed_covers = params.rows * params.cols;
+
     // Create a new ImgBuf with width: imgx and height: imgy
     let mut imgbuf = Blend(ImageBuffer::new(width, height));
 
@@ -68,7 +70,11 @@ pub async fn create_chart(params: Chart) -> Result<Vec<u8>, anyhow::Error> {
             artist,
             rating,
         },
-    ) in params.entries.into_iter().enumerate()
+    ) in params
+        .entries
+        .into_iter()
+        .take(num_displayed_covers as usize)
+        .enumerate()
     {
         let x = (i as u32 % (params.cols as u32)) * (params.cover_size as u32);
         let y = (i as u32 / (params.cols as u32)) * (params.cover_size as u32);
