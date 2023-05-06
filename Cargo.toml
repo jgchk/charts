@@ -23,8 +23,8 @@ path = "src/lib.rs"
 
 # Each handler has to be specified as [[bin]]
 [[bin]]
-name = "handler"
-path = "api/handler.rs"
+name = "chart"
+path = "api/chart.rs"
 
 # Note that you need to provide unique names for each binary:
 # [[bin]]
