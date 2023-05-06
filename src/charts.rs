@@ -132,6 +132,13 @@ pub async fn create_chart(params: Chart) -> anyhow::Result<Vec<u8>> {
             let scaled = img.resize_to_fill(cover_size as u32, cover_size as u32, filter);
 
             imageops::replace(&mut imgbuf.0, &scaled, x as i64, y as i64);
+        } else {
+            // fill with white pixels
+            for x in x..(x + cover_size as u32) {
+                for y in y..(y + cover_size as u32) {
+                    imgbuf.0.put_pixel(x, y, Rgba([255u8, 255u8, 255u8, 255u8]));
+                }
+            }
         }
 
         let (text_color, card_color) = match avg_color {
