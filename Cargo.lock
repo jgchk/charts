@@ -163,6 +163,8 @@ name = "charts"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bytes",
+ "futures",
  "image",
  "imageproc",
  "reqwest",

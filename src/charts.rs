@@ -1,5 +1,11 @@
-use std::{io::Cursor, vec};
+use std::{
+    collections::{HashMap, HashSet},
+    io::Cursor,
+    vec,
+};
 
+use bytes::Bytes;
+use futures::{stream, StreamExt};
 use image::{
     codecs::png::PngEncoder,
     imageops::{self, FilterType},
@@ -50,7 +56,7 @@ struct ChartEntry {
 type Image = Blend<ImageBuffer<Pixel, Vec<u8>>>;
 type Pixel = Rgba<u8>;
 
-pub async fn create_chart(params: Chart) -> Result<Vec<u8>, anyhow::Error> {
+pub async fn create_chart(params: Chart) -> anyhow::Result<Vec<u8>> {
     let cover_size = params.cover_size.unwrap_or(300);
 
     let (rows, cols) = {
@@ -85,8 +91,12 @@ pub async fn create_chart(params: Chart) -> Result<Vec<u8>, anyhow::Error> {
 
     let num_displayed_covers = rows * cols;
 
+    let (font_reg, font_bold) = get_fonts()?;
+
     // Create a new ImgBuf with width: imgx and height: imgy
     let mut imgbuf = Blend(ImageBuffer::new(width, height));
+
+    let remote_image_map = download_images(&params.entries).await?;
 
     for (
         i,
@@ -107,7 +117,7 @@ pub async fn create_chart(params: Chart) -> Result<Vec<u8>, anyhow::Error> {
 
         let mut avg_color: Option<Rgba<u8>> = None;
         if let Some(image_url) = image_url {
-            let img_bytes = reqwest::get(image_url).await?.bytes().await?;
+            let img_bytes = remote_image_map.get(&image_url).unwrap();
             let img = image::load_from_memory(&img_bytes)?;
 
             avg_color = Some(get_average_color(&img));
@@ -134,14 +144,6 @@ pub async fn create_chart(params: Chart) -> Result<Vec<u8>, anyhow::Error> {
                 Rgba([0u8, 0u8, 0u8, 127u8]),       // white
             ),
         };
-
-        let font_reg = Vec::from(include_bytes!("../res/Inter-Regular.ttf") as &[u8]);
-        let font_reg =
-            Font::try_from_vec(font_reg).ok_or(anyhow::anyhow!("Failed to load regular font"))?;
-
-        let font_bold = Vec::from(include_bytes!("../res/Inter-Bold.ttf") as &[u8]);
-        let font_bold =
-            Font::try_from_vec(font_bold).ok_or(anyhow::anyhow!("Failed to load bold font"))?;
 
         let lines = {
             let mut lines = vec![artist, title];
@@ -221,6 +223,36 @@ pub async fn create_chart(params: Chart) -> Result<Vec<u8>, anyhow::Error> {
     )?;
 
     Ok(output)
+}
+
+fn get_fonts() -> anyhow::Result<(Font<'static>, Font<'static>)> {
+    let font_reg = Vec::from(include_bytes!("../res/Inter-Regular.ttf") as &[u8]);
+    let font_reg =
+        Font::try_from_vec(font_reg).ok_or(anyhow::anyhow!("Failed to load regular font"))?;
+
+    let font_bold = Vec::from(include_bytes!("../res/Inter-Bold.ttf") as &[u8]);
+    let font_bold =
+        Font::try_from_vec(font_bold).ok_or(anyhow::anyhow!("Failed to load bold font"))?;
+
+    Ok((font_reg, font_bold))
+}
+
+async fn download_images(entries: &Vec<ChartEntry>) -> anyhow::Result<HashMap<String, Bytes>> {
+    let unique_images = entries
+        .iter()
+        .filter_map(|entry| entry.image_url.as_ref())
+        .collect::<HashSet<&String>>();
+
+    let remote_image_map = stream::iter(unique_images.into_iter().map(|image_url| async move {
+        let img_bytes = reqwest::get(image_url).await?.bytes().await?;
+        Result::<(String, Bytes), reqwest::Error>::Ok((image_url.clone(), img_bytes))
+    }))
+    .buffer_unordered(10) // Adjust the concurrency level here
+    .filter_map(|x| async move { x.ok() })
+    .collect::<HashMap<String, Bytes>>()
+    .await;
+
+    Ok(remote_image_map)
 }
 
 fn get_average_color(image: &DynamicImage) -> Rgba<u8> {
