@@ -4,7 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+anyhow = "1.0.71"
 image = "0.24.6"
+imageproc = "0.23.0"
+reqwest = "0.11.17"
+rusttype = "0.9.3"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1", features = ["raw_value"] }
 serde_valid = "0.16.1"

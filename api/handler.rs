@@ -31,7 +31,7 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
         return make_error_response_detail(StatusCode::BAD_REQUEST, "Invalid request body", errors);
     };
 
-    let chart = create_chart(chart_request);
+    let chart = create_chart(chart_request).await;
 
     match chart {
         Ok(chart) => Ok(Response::builder()
