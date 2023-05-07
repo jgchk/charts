@@ -17,6 +17,7 @@ function merge_fonts() {
 
 fonts_reg=(
 	"inter/regular.otf"
+	"noto-adlam/regular.ttf"
 	"noto-arabic/regular.ttf"
 	"noto-bengali/regular.ttf"
 	# "noto-chinese-simplified/regular.otf"
@@ -27,11 +28,15 @@ fonts_reg=(
 	"noto-hindi/regular.ttf"
 	"noto-japanese/regular.ttf"
 	"noto-korean/regular.otf"
+	"noto-nko/regular.ttf"
 	"noto-thai/regular.ttf"
+	"noto-tifinagh/regular.ttf"
+	"noto-vai/regular.ttf"
 )
 
 fonts_bold=(
 	"inter/bold.otf"
+	"noto-adlam/bold.ttf"
 	"noto-arabic/bold.ttf"
 	"noto-bengali/bold.ttf"
 	# "noto-chinese-simplified/bold.otf"
@@ -42,7 +47,10 @@ fonts_bold=(
 	"noto-hindi/bold.ttf"
 	"noto-japanese/bold.ttf"
 	"noto-korean/bold.otf"
+	"noto-nko/regular.ttf"
 	"noto-thai/bold.ttf"
+	"noto-tifinagh/regular.ttf"
+	"noto-vai/regular.ttf"
 )
 
 # Merge regular fonts
@@ -56,7 +64,7 @@ for i in "${!fonts_reg[@]}"; do
 	merge_fonts "$input" "${fonts_reg[$i]}" "$output"
 	input="$output"
 done
-mv "$output" reg_final.ttf
+mv "$output" reg_final.otf
 
 # Merge bold fonts
 output="bold"
@@ -69,7 +77,7 @@ for i in "${!fonts_bold[@]}"; do
 	merge_fonts "$input" "${fonts_bold[$i]}" "$output"
 	input="$output"
 done
-mv "$output" bold_final.ttf
+mv "$output" bold_final.otf
 
 # Delete temporary files
 for i in $(seq 1 $((${#fonts_reg[@]} - 2))); do
