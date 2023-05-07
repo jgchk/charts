@@ -1,88 +1,43 @@
 #!/bin/bash
 
 function merge_fonts() {
-	local font1="$1"
-	local font2="$2"
-	local font_out="$3"
-
-	echo ""
-	echo ""
-	echo "Merging $font1 and $font2 to $font_out"
-	echo ""
-
-	fontforge -lang=ff -script mergefonts.ff "$font1" "$font2" 2816 "$font_out"
-	rm 1.otf
-	rm 2.otf
+	local em_size="$1"
+	local font_out="$2"
+	shift 2
+	fontforge -lang=ff -script mergefonts.ff "$em_size" "$font_out" "$@"
 }
 
-fonts_reg=(
-	"inter/regular.otf"
-	"noto-adlam/regular.ttf"
-	"noto-arabic/regular.ttf"
-	"noto-bengali/regular.ttf"
-	# "noto-chinese-simplified/regular.otf"
-	# "noto-chinese-traditional/regular.otf"
-	"noto-ethiopic/regular.ttf"
-	"noto-emoji/regular.ttf"
-	"noto-hebrew/regular.ttf"
-	"noto-hindi/regular.ttf"
-	"noto-japanese/regular.ttf"
-	"noto-korean/regular.otf"
-	"noto-nko/regular.ttf"
-	"noto-thai/regular.ttf"
-	"noto-tifinagh/regular.ttf"
-	"noto-vai/regular.ttf"
-)
+# Populate fonts_reg array with all Regular .ttf and .otf files
+mapfile -t fonts_reg < <(find . -type f \( -iname "*regular.ttf" -o -iname "*regular.otf" \) -printf "%p\n" | sort)
 
-fonts_bold=(
-	"inter/bold.otf"
-	"noto-adlam/bold.ttf"
-	"noto-arabic/bold.ttf"
-	"noto-bengali/bold.ttf"
-	# "noto-chinese-simplified/bold.otf"
-	# "noto-chinese-traditional/bold.otf"
-	"noto-ethiopic/bold.ttf"
-	"noto-emoji/bold.ttf"
-	"noto-hebrew/bold.ttf"
-	"noto-hindi/bold.ttf"
-	"noto-japanese/bold.ttf"
-	"noto-korean/bold.otf"
-	"noto-nko/regular.ttf"
-	"noto-thai/bold.ttf"
-	"noto-tifinagh/regular.ttf"
-	"noto-vai/regular.ttf"
-)
-
-# Merge regular fonts
-output="reg"
-input="${fonts_reg[0]}"
-for i in "${!fonts_reg[@]}"; do
-	if [ $i -eq 0 ]; then
-		continue
+# Populate fonts_bold array with Bold .ttf and .otf files or fallback to Regular
+fonts_bold=()
+for font in "${fonts_reg[@]}"; do
+	bold_font="${font/regular/bold}"
+	if [[ -f $bold_font ]]; then
+		fonts_bold+=("$bold_font")
+	else
+		fonts_bold+=("$font")
 	fi
-	output="reg${i}.otf"
-	merge_fonts "$input" "${fonts_reg[$i]}" "$output"
-	input="$output"
 done
-mv "$output" reg_final.otf
 
-# Merge bold fonts
-output="bold"
-input="${fonts_bold[0]}"
-for i in "${!fonts_bold[@]}"; do
-	if [ $i -eq 0 ]; then
-		continue
-	fi
-	output="bold${i}.otf"
-	merge_fonts "$input" "${fonts_bold[$i]}" "$output"
-	input="$output"
-done
-mv "$output" bold_final.otf
+# Print the list of fonts to be merged for each variation
+echo "Fonts to be merged for Regular:"
+printf "  %s\n" "${fonts_reg[@]}"
+echo ""
 
-# Delete temporary files
-for i in $(seq 1 $((${#fonts_reg[@]} - 2))); do
-	rm "reg${i}.otf"
-done
-for i in $(seq 1 $((${#fonts_bold[@]} - 2))); do
-	rm "bold${i}.otf"
-done
+echo "Fonts to be merged for Bold:"
+printf "  %s\n" "${fonts_bold[@]}"
+echo ""
+
+# Ask for user confirmation
+echo "Do you want to proceed with merging these fonts? (y/n)"
+read -r response
+
+if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
+	em_size=2816
+	merge_fonts $em_size reg_final.ttf "${fonts_reg[@]}"
+	merge_fonts $em_size bold_final.ttf "${fonts_bold[@]}"
+else
+	echo "Aborting..."
+fi

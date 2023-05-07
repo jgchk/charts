@@ -1,16 +1,22 @@
-#!/usr/local/bin/fontforge
-Open($1)
-SelectAll()
-ScaleToEm(Strtol($3))
-Generate("1.otf")
-Close()
-Open($2)
-SelectAll()
-ScaleToEm(Strtol($3))
-Generate("2.otf")
-Close()
-Open("1.otf")
-MergeFonts("2.otf")
-Generate($4)
-Close()
+#!/usr/bin/fontforge -script
 
+# Usage: fontforge -script merge_multiple_fonts.ff em_size output_fontfile [fontfile ...]
+# Font files are merged in the order they are provided.
+
+Print("Merging fonts")
+em_size = Strtol($1)
+output_fontfile = $2
+Open($3)
+SelectAll()
+ScaleToEm(em_size)
+i = 4
+while (i < $argc)
+    fontfile = $argv[i]
+    MergeFonts(fontfile)
+    SelectAll()
+    ScaleToEm(em_size)
+    i += 1
+endloop
+Generate(output_fontfile)
+Close()
+Print("Fonts merged successfully")
