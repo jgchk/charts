@@ -17,16 +17,20 @@ function merge_fonts() {
 
 fonts_reg=(
 	"inter/regular.ttf"
-	"pretendard/regular.otf"
-	"pretendard-jp/regular.otf"
+	"noto-cjk/japanese/regular.otf"
+	"noto-cjk/korean/regular.otf"
+	"noto-cjk/simplified-chinese/regular.otf"
+	"noto-cjk/traditional-chinese/regular.otf"
 	"noto-ethiopic/regular.ttf"
 	"noto-emoji/regular.ttf"
 )
 
 fonts_bold=(
 	"inter/bold.ttf"
-	"pretendard/bold.otf"
-	"pretendard-jp/bold.otf"
+	"noto-cjk/japanese/bold.otf"
+	"noto-cjk/korean/bold.otf"
+	"noto-cjk/simplified-chinese/bold.otf"
+	"noto-cjk/traditional-chinese/bold.otf"
 	"noto-ethiopic/bold.ttf"
 	"noto-emoji/bold.ttf"
 )
