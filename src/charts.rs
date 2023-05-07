@@ -132,10 +132,10 @@ pub async fn create_chart(params: Chart) -> anyhow::Result<Vec<u8>> {
 
             imageops::replace(&mut imgbuf.0, &scaled, x as i64, y as i64);
         } else {
-            // fill with white pixels
+            // fill with gray pixels
             for x in x..(x + cover_size as u32) {
                 for y in y..(y + cover_size as u32) {
-                    imgbuf.0.put_pixel(x, y, Rgba([255u8, 255u8, 255u8, 255u8]));
+                    imgbuf.0.put_pixel(x, y, Rgba([127u8, 127u8, 127u8, 255u8]));
                 }
             }
         }
