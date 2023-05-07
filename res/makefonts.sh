@@ -1,10 +1,10 @@
 #!/bin/bash
 
 function merge_fonts() {
-	local em_size="$1"
-	local font_out="$2"
-	shift 2
-	fontforge -lang=ff -script mergefonts.ff "$em_size" "$font_out" "$@"
+	local font1="$1"
+	local font2="$2"
+	local font_out="$3"
+	fontforge -lang=ff -script mergefonts.ff "$font1" "$font2" 2816 "$font_out"
 }
 
 # Populate fonts_reg array with all Regular .ttf and .otf files
@@ -34,10 +34,37 @@ echo ""
 echo "Do you want to proceed with merging these fonts? (y/n)"
 read -r response
 
-if [[ "$response" =~ ^([yY][eE][sS]|[yY])$ ]]; then
-	em_size=2816
-	merge_fonts $em_size reg_final.ttf "${fonts_reg[@]}"
-	merge_fonts $em_size bold_final.ttf "${fonts_bold[@]}"
-else
-	echo "Aborting..."
-fi
+output="reg"
+input="${fonts_reg[0]}"
+for i in "${!fonts_reg[@]}"; do
+	if [ $i -eq 0 ]; then
+		continue
+	fi
+	output="reg${i}.ttf"
+	merge_fonts "$input" "${fonts_reg[$i]}" "$output"
+	input="$output"
+done
+mv "$output" reg_final.ttf
+
+output="bold"
+input="${fonts_bold[0]}"
+for i in "${!fonts_bold[@]}"; do
+	if [ $i -eq 0 ]; then
+		continue
+	fi
+	output="bold${i}.ttf"
+	merge_fonts "$input" "${fonts_bold[$i]}" "$output"
+	input="$output"
+done
+mv "$output" bold_final.ttf
+
+for i in $(seq 1 $((${#fonts_reg[@]} - 2))); do
+	rm "reg${i}.ttf"
+done
+
+for i in $(seq 1 $((${#fonts_bold[@]} - 2))); do
+	rm "bold${i}.ttf"
+done
+
+rm 1.ttf
+rm 2.ttf
