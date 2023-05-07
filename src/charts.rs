@@ -232,11 +232,11 @@ pub async fn create_chart(params: Chart) -> anyhow::Result<Vec<u8>> {
 }
 
 fn get_fonts() -> anyhow::Result<(Font<'static>, Font<'static>)> {
-    let font_reg = Vec::from(include_bytes!("../res/Inter-Regular.ttf") as &[u8]);
+    let font_reg = Vec::from(include_bytes!("../res/reg_final.ttf") as &[u8]);
     let font_reg =
         Font::try_from_vec(font_reg).ok_or(anyhow::anyhow!("Failed to load regular font"))?;
 
-    let font_bold = Vec::from(include_bytes!("../res/Inter-Bold.ttf") as &[u8]);
+    let font_bold = Vec::from(include_bytes!("../res/bold_final.ttf") as &[u8]);
     let font_bold =
         Font::try_from_vec(font_bold).ok_or(anyhow::anyhow!("Failed to load bold font"))?;
 
