@@ -7,7 +7,7 @@ use std::{
 use bytes::Bytes;
 use futures::{stream, StreamExt};
 use image::{
-    codecs::png::PngEncoder,
+    codecs::jpeg::JpegEncoder,
     imageops::{self, FilterType},
     ColorType, DynamicImage, EncodableLayout, GenericImageView, ImageBuffer, ImageEncoder, Rgba,
 };
@@ -219,7 +219,8 @@ pub async fn create_chart(params: Chart) -> anyhow::Result<Vec<u8>> {
 
     let mut output: Vec<u8> = Vec::new();
     let mut binding = Cursor::new(&mut output);
-    let encoder = PngEncoder::new(&mut binding);
+
+    let encoder = JpegEncoder::new_with_quality(&mut binding, 90);
 
     encoder.write_image(
         imgbuf.0.as_bytes(),
