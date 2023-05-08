@@ -48,20 +48,34 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
         return make_error_response_detail(StatusCode::BAD_REQUEST, "Invalid request body", errors);
     };
 
-    let chart = create_chart(chart_request).await;
+    let chart = match create_chart(chart_request).await {
+        Ok(chart) => chart,
+        Err(err) => {
+            return make_error_response_detail(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Error creating chart",
+                err.to_string(),
+            )
+        }
+    };
 
-    match chart {
-        Ok(chart) => Ok(Response::builder()
-            .status(StatusCode::OK)
-            .header("Access-Control-Allow-Origin", "*")
-            .header("Access-Control-Allow-Methods", "POST, OPTIONS")
-            .header("Access-Control-Allow-Headers", "Content-Type")
-            .header("Content-Type", "image/png")
-            .body(chart.into())?),
-        Err(err) => make_error_response_detail(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Error creating chart",
-            err.to_string(),
-        ),
-    }
+    let response = match Response::builder()
+        .status(StatusCode::OK)
+        .header("Access-Control-Allow-Origin", "*")
+        .header("Access-Control-Allow-Methods", "POST, OPTIONS")
+        .header("Access-Control-Allow-Headers", "Content-Type")
+        .header("Content-Type", "image/png")
+        .body(chart.into())
+    {
+        Ok(response) => response,
+        Err(err) => {
+            return make_error_response_detail(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Error creating response",
+                err.to_string(),
+            );
+        }
+    };
+
+    Ok(response)
 }
