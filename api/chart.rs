@@ -12,7 +12,7 @@ async fn main() -> Result<(), Error> {
 }
 
 pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
-    println!("Request: {:?}", req);
+    println!("Received request");
 
     if req.method() == Method::OPTIONS {
         println!("Handling OPTIONS request");
@@ -72,7 +72,7 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
         }
     };
 
-    println!("Chart created: {:?}", chart);
+    println!("Chart created!");
 
     let response = match Response::builder()
         .status(StatusCode::OK)
@@ -93,7 +93,7 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
         }
     };
 
-    println!("Response: {:?}", response);
+    println!("Sending response");
 
     Ok(response)
 }
