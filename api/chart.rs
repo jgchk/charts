@@ -12,10 +12,10 @@ async fn main() -> Result<(), Error> {
 }
 
 pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
-    println!("1. Starting handler");
+    println!("Request: {:?}", req);
 
     if req.method() == Method::OPTIONS {
-        println!("2. Handling OPTIONS request");
+        println!("Handling OPTIONS request");
         return Ok(Response::builder()
             .status(StatusCode::OK)
             .header("Access-Control-Allow-Origin", "*")
@@ -25,7 +25,7 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
     }
 
     if req.method() != Method::POST {
-        println!("3. Invalid method: {:?}", req.method());
+        println!("Invalid method: {:?}", req.method());
         return make_error_response(
             StatusCode::METHOD_NOT_ALLOWED,
             "Only POST requests are allowed",
@@ -36,14 +36,14 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
     let chart_request = match chart_request {
         Ok(Some(chart_request)) => chart_request,
         Ok(None) => {
-            println!("4. Missing or empty request body");
+            println!("Missing or empty request body");
             return make_error_response(
                 StatusCode::BAD_REQUEST,
                 "Request body is missing or empty",
             );
         }
         Err(err) => {
-            println!("5. Failed to parse request body: {:?}", err);
+            println!("Failed to parse request body: {:?}", err);
             return make_error_response_detail(
                 StatusCode::BAD_REQUEST,
                 "Failed to parse request body",
@@ -52,16 +52,18 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
         }
     };
 
+    println!("Request body: {:?}", chart_request);
+
     let is_valid = chart_request.validate();
     if let Err(errors) = is_valid {
-        println!("6. Invalid request body: {:?}", errors);
+        println!("Invalid request body: {:?}", errors);
         return make_error_response_detail(StatusCode::BAD_REQUEST, "Invalid request body", errors);
     };
 
     let chart = match create_chart(chart_request).await {
         Ok(chart) => chart,
         Err(err) => {
-            println!("7. Error creating chart: {:?}", err);
+            println!("Error creating chart: {:?}", err);
             return make_error_response_detail(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Error creating chart",
@@ -69,6 +71,8 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
             );
         }
     };
+
+    println!("Chart created: {:?}", chart);
 
     let response = match Response::builder()
         .status(StatusCode::OK)
@@ -80,7 +84,7 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
     {
         Ok(response) => response,
         Err(err) => {
-            println!("8. Error creating response: {:?}", err);
+            println!("Error creating response: {:?}", err);
             return make_error_response_detail(
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Error creating response",
@@ -89,6 +93,7 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
         }
     };
 
-    println!("9. Handler successful");
+    println!("Response: {:?}", response);
+
     Ok(response)
 }
