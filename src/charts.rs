@@ -220,7 +220,7 @@ pub async fn create_chart(params: Chart) -> anyhow::Result<Vec<u8>> {
     let mut output: Vec<u8> = Vec::new();
     let mut binding = Cursor::new(&mut output);
 
-    let encoder = JpegEncoder::new_with_quality(&mut binding, 90);
+    let encoder = JpegEncoder::new_with_quality(&mut binding, 100);
 
     encoder.write_image(
         imgbuf.0.as_bytes(),
