@@ -52,7 +52,7 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
         }
     };
 
-    println!("Request body: {:?}", chart_request);
+    println!("Parsed request body");
 
     let is_valid = chart_request.validate();
     if let Err(errors) = is_valid {
